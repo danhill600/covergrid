@@ -129,3 +129,6 @@ dmypy.json
 .pyre/
 
 *.png
+apikey.secret
+index16
+config.py
