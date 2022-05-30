@@ -4,9 +4,11 @@ import pylast
 import shutil
 import subprocess
 import random
+import re
 from config import musicdir
 from getplaylistalbums import get_album_paths
 from agfunctions import connect_client, get_key
+import requests
 
 def get_local_art(songdir):
     theimages = []
@@ -21,19 +23,39 @@ def get_local_art(songdir):
     if theimages:
         biggestimage = max(theimages, key=os.path.getsize)
         subprocess.call(['convert', '-resize', '400x400', biggestimage, 'cover.png'])
-        print("local image written to artgrabber/cover.png")
+        print("local image written to covergrid/cover.png")
     else:
-        get_lastfm_art(network, client)
+        print("no local art, checking lastfm...")
+        get_lastfm_art(songdir)
 
-def get_lastfm_art(network, client):
-    try:
-        album = network.get_album(client.currentsong()['artist'],
-                                  client.currentsong()['album'])
-    except:
-        album = "greatest hits"
+def get_lastfm_art(songdir):
+    for fname in os.listdir(songdir):
+        if fname.endswith(('.flac','.mp3','.aac','wav')):
+            firstsong = songdir + "/" + fname
+            print(firstsong)
+            break
+
+    myexifdump = subprocess.check_output(['exiftool', firstsong]).decode("utf-8")
+    for i in myexifdump.split('\n'):
+        if re.search('Artist                          :', i):
+            artist = i.split(':')[1]
+        #else:
+        #    artist = 'Primate'
+        if re.search('Album                           :', i):
+            album = i.split(':')[1]
+        #else:
+        #    album = 'Greatest Hits'
+
+    print("Artist: " + artist)
+    print("Album: " + album)
+
+
+    fmalbum = network.get_album(artist, album)
+    print("fmalbum: ")
+    print(fmalbum)
     try:
 
-        url = album.get_cover_image().encode("utf-8")
+        url = fmalbum.get_cover_image().encode("utf-8")
         response = requests.get(url, stream =True)
 
         if response.status_code == 200:
@@ -64,7 +86,7 @@ mytoken = 1
 for albumpath in albumPaths:
     if mytoken < 17:
         get_local_art(albumpath)
-        subprocess.call(['mv', 'cover.png', 'index16/cover' + str(mytoken) + '.png'])
+        subprocess.call(['mv', 'cover.png', 'index16/cover' + str(mytoken).zfill(4) + '.png'])
         mytoken= mytoken + 1
     else:
         break
