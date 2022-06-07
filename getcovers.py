@@ -22,7 +22,7 @@ def get_local_art(songdir):
             theimages.append(songdir + "/" + fname)
     if theimages:
         biggestimage = max(theimages, key=os.path.getsize)
-        subprocess.call(['convert', '-resize', '400x400', biggestimage, 'cover.png'])
+        subprocess.call(['convert', '-resize', '200x200', biggestimage, 'cover.png'])
         print("local image written to covergrid/cover.png")
     else:
         print("no local art, checking lastfm...")
@@ -61,7 +61,7 @@ def get_lastfm_art(songdir):
         if response.status_code == 200:
             with open('cover.png', 'wb') as out_file:
                 shutil.copyfileobj(response.raw, out_file)
-            subprocess.call(['convert', '-resize', '400x400', 'cover.png', 'cover.png'])
+            subprocess.call(['convert', '-resize', '200x200', 'cover.png', 'cover.png'])
             del response
         print("Last.fm image written to cover.png")
     except:
@@ -72,7 +72,8 @@ def enjoy_monkey():
     print("Enjoy monkey.")
     monkeydir = "/endo/pics/monkeys"
     monkey= monkeydir + "/" +random.choice(os.listdir(monkeydir))
-    subprocess.call(['convert', '-resize', '400x400', monkey, 'cover.png'])
+    subprocess.call(['convert', monkey, '-resize', '200x200^', '-gravity',
+                     'center','-extent', '200x200', 'cover.png'])
 
 client = connect_client()
 network = pylast.LastFMNetwork(get_key())
