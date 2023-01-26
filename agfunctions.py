@@ -3,13 +3,14 @@ import mpd
 import os
 import subprocess
 import filecmp
-#import urllib.request
 import requests
 import shutil
 import time
 import getpass
 import random
 from textwrap import TextWrapper
+import re
+
 
 def get_key():
     try:
@@ -19,6 +20,8 @@ def get_key():
     except Exception as e:
             print(e)
             exit()
+
+network = pylast.LastFMNetwork(get_key())
 
 def connect_client():
     """Connect to MPD Client"""
@@ -97,26 +100,50 @@ def get_local_art(network, client):
     else:
         get_lastfm_art(network, client)
 
-def get_lastfm_art(network, client):
-    try:
-        album = network.get_album(client.currentsong()['artist'],
-                                  client.currentsong()['album'])
-    except:
-        album = "greatest hits"
-    try:
+def get_lastfm_art(songdir):
+    for fname in os.listdir(songdir):
+        if fname.endswith(('.flac','.mp3','.aac','wav')):
+            firstsong = songdir + "/" + fname
+            print(firstsong)
+            # I think a lot of the stuff below should go here
+            myexifdump = subprocess.check_output(['exiftool', firstsong]).decode("utf-8")
+            for i in myexifdump.split('\n'):
+                if re.search('Artist                          :', i):
+                    artist = i.split(':')[1]
+                #else:
+                #    artist = 'Primate'
+                if re.search('Album                           :', i):
+                    album = i.split(':')[1]
+                #else:
+                #    album = 'Greatest Hits'
 
-        url = album.get_cover_image().encode("utf-8")
-        response = requests.get(url, stream =True)
+            print("Artist: " + artist)
+            print("Album: " + album)
 
-        if response.status_code == 200:
-            with open('cover.png', 'wb') as out_file:
-                shutil.copyfileobj(response.raw, out_file)
-            subprocess.call(['convert', '-resize', '400x400', 'cover.png', 'cover.png'])
-            del response
-        print("Last.fm image written to cover.png")
-    except:
-        print("couldn't find a cover at last.fm, either.")
-        enjoy_monkey()
+
+            fmalbum = network.get_album(artist, album)
+            print("fmalbum: ")
+            print(fmalbum)
+            try:
+
+                url = fmalbum.get_cover_image().encode("utf-8")
+                response = requests.get(url, stream =True)
+
+                if response.status_code == 200:
+                    with open('cover.png', 'wb') as out_file:
+                        shutil.copyfileobj(response.raw, out_file)
+                    subprocess.call(['convert', '-resize', '200x200', 'cover.png', 'cover.png'])
+                    del response
+                print("Last.fm image written to cover.png")
+                return 'funkywinkerbean'
+            except:
+                print("couldn't find a cover at last.fm, either.")
+
+            break #okay but what do we wanna do if there isn't one?
+    else:
+        print("there aren't any songs in " + songdir)
+
+
 
 def check_for_new_album(album, client):
     """See if a new album is playing and if so reset the variable"""
